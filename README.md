@@ -114,13 +114,13 @@ await replayDetectionService.DetectSuspiciousReplay(jti, httpContext);
 2. Implement MultiTenant (if applicable)
 3. Consider TokenBinding (for high-security requirements)
 
-## 🔧 .NET 9 Features Used
+## 🔧 Modern .NET Features Used
 
-- **JsonWebTokenHandler**: Preferred over `JwtSecurityTokenHandler` for better performance
-- **IssuerSigningKeyResolver**: Dynamic key selection for multi-key validation
-- **Source-Generated Logging**: Zero-allocation structured logging for forensics
-- **Object Pooling**: ASP.NET Core object pooling for handler reuse
-- **TimeProvider**: Testable time abstraction for temporal validation
+- **JsonWebTokenHandler**: Preferred over `JwtSecurityTokenHandler` for better performance (.NET 6+)
+- **IssuerSigningKeyResolver**: Dynamic key selection for multi-key validation (.NET Core 3.1+)
+- **Source-Generated Logging**: Zero-allocation structured logging for forensics (.NET 6+)
+- **Object Pooling**: ASP.NET Core object pooling for handler reuse (.NET Core 2.1+)
+- **Modern Async Patterns**: Task-based asynchronous programming throughout
 
 ## ⚠️ Important Security Notes
 

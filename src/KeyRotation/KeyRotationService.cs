@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
 
@@ -14,7 +15,7 @@ public class KeyRotationService
         _keyManager = keyManager;
     }
 
-    public static void ConfigureJwtAuthentication(IServiceCollection services)
+    public static void ConfigureJwtAuthentication(IServiceCollection services, Func<IServiceProvider> serviceProviderFactory)
     {
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -25,14 +26,26 @@ public class KeyRotationService
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
+                    // ✅ CRITICAL: Prevent algorithm confusion attacks (CVE-2024-54150)
+                    ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
                     IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
                     {
-                        var serviceProvider = options.BackchannelHttpHandler as IServiceProvider;
-                        var keyManager = serviceProvider?.GetService<IKeyManager>();
+                        // ✅ CRITICAL: Validate algorithm before key resolution
+                        if (securityToken is JsonWebToken jwt && 
+                            !validationParameters.ValidAlgorithms.Contains(jwt.Alg))
+                        {
+                            throw new SecurityTokenValidationException($"Algorithm '{jwt.Alg}' not allowed");
+                        }
+
+                        // Resolve KeyManager from the service provider
+                        var serviceProvider = serviceProviderFactory();
+                        var keyManager = serviceProvider.GetService<IKeyManager>();
+                        if (keyManager == null)
+                            throw new InvalidOperationException("KeyManager not registered in DI container");
                         
                         var keys = new List<SecurityKey>
                         {
-                            keyManager?.GetCurrentKey() ?? throw new InvalidOperationException("Current key not available")
+                            keyManager.GetCurrentKey()
                         };
                         
                         // During rotation window, accept both current and previous keys

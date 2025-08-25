@@ -34,7 +34,7 @@ public class ReplayDetectionService
             Country = await _geoService.GetCountryAsync(context.Connection.RemoteIpAddress)
         };
         
-        var recentUsages = await _cache.GetListAsync<TokenUsage>($"usage_history:{jti}");
+        var recentUsages = _cache.GetList<TokenUsage>($"usage_history:{jti}");
         
         // Flag: Token used from different countries within 30 minutes
         var suspiciousLocation = recentUsages?.Any(u => 
@@ -55,7 +55,7 @@ public class ReplayDetectionService
         }
         
         // Store current usage for future analysis
-        await _cache.AddToListAsync($"usage_history:{jti}", currentUsage, TimeSpan.FromHours(2));
+        _cache.AddToList($"usage_history:{jti}", currentUsage, TimeSpan.FromHours(2));
         return true;
     }
 }
@@ -80,15 +80,18 @@ public interface ISecurityAlertService
 
 public static class MemoryCacheExtensions
 {
-    public static async Task<List<T>?> GetListAsync<T>(this IMemoryCache cache, string key)
+    public static List<T>? GetList<T>(this IMemoryCache cache, string key)
     {
         return cache.Get<List<T>>(key);
     }
 
-    public static async Task AddToListAsync<T>(this IMemoryCache cache, string key, T item, TimeSpan expiration)
+    public static void AddToList<T>(this IMemoryCache cache, string key, T item, TimeSpan expiration)
     {
-        var list = cache.Get<List<T>>(key) ?? new List<T>();
-        list.Add(item);
-        cache.Set(key, list, expiration);
+        lock (cache) // Simple lock for thread safety - consider more sophisticated locking in production
+        {
+            var list = cache.Get<List<T>>(key) ?? new List<T>();
+            list.Add(item);
+            cache.Set(key, list, expiration);
+        }
     }
 }
