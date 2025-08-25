@@ -161,9 +161,6 @@ Contributions welcome! Please:
 3. Update documentation for new features
 4. Consider backward compatibility impact
 
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
 
 ## ⭐ If This Helps You
 
